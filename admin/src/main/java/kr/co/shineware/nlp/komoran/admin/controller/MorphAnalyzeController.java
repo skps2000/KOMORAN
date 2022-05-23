@@ -120,7 +120,6 @@ public class MorphAnalyzeController {
 
     @GetMapping(value = "/diff/file/download")
     public ResponseEntity<ByteArrayResource> downloadFile(@RequestParam(value = "filename") String filename) {
-
         List<String> lines = FileUtil.load2List("diff_logs/" + filename);
         logger.info("Loading " + filename);
 

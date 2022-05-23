@@ -20,12 +20,25 @@ package kr.co.shineware.nlp.komoran.test;
 import kr.co.shineware.nlp.komoran.core.Komoran;
 import kr.co.shineware.nlp.komoran.model.KomoranResult;
 import kr.co.shineware.nlp.komoran.model.Token;
+import kr.co.shineware.util.common.model.Pair;
 
 import java.util.List;
 
 public class KomoranTest {
 
 	public static void main(String[] args) throws Exception {
+		String modelPath = "models_full";
+		Komoran komoran = new Komoran(modelPath);
+		komoran.setFWDic("user_data/fwd.user");
+		komoran.setUserDic("user_data/dic.user");
+		KomoranResult sentences = komoran.analyze("청하는아이오아이출신입니다");
+		System.out.println(sentences.getTokenList());
+//		List<Pair<String, String>> sentence = sentences.get(0);
+//		for (Pair<String, String> token : sentence)
+//			System.out.println(token);
+	}
+
+	public static void mains(String[] args) throws Exception {
 
 		Komoran komoran = new Komoran("models_full");
 		komoran.setFWDic("user_data/fwd.user");
