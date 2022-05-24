@@ -27,12 +27,13 @@ import java.util.List;
 public class KomoranTest {
 
 	public static void main(String[] args) throws Exception {
-		String modelPath = "models_full";
-		Komoran komoran = new Komoran(modelPath);
-		komoran.setFWDic("user_data/fwd.user");
-		komoran.setUserDic("user_data/dic.user");
-		KomoranResult sentences = komoran.analyze("청하는아이오아이출신입니다");
-		System.out.println(sentences.getTokenList());
+
+//		String modelPath = "models_full";
+//		Komoran komoran = new Komoran(modelPath);
+//		komoran.setFWDic("user_data/fwd.user");
+//		komoran.setUserDic("user_data/dic.user");
+//		KomoranResult sentences = komoran.analyze("청하는아이오아이출신입니다");
+//		System.out.println(sentences.getTokenList());
 //		List<Pair<String, String>> sentence = sentences.get(0);
 //		for (Pair<String, String> token : sentence)
 //			System.out.println(token);
