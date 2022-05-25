@@ -2,7 +2,6 @@ server:
   address: 127.0.0.1
   port: 3579
 
-
 spring:
   servlet:
     multipart:
@@ -60,10 +59,15 @@ models:
   model:
     dir: model/
 
-
 logging:
   level:
     kr.co.shineware.nlp.komoran.admin.*: INFO
     org.springframework: ERROR
     org.hibernate: ERROR
     com.zaxxer.hikari.*: ERROR
+
+user:
+  environment: dev
+  devpath: C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output//
+  prodpath: /apps/output/
+

@@ -12,24 +12,26 @@ import kr.co.shineware.util.common.file.FileUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-
 @RestController
 @RequestMapping("/analyze")
 public class MorphAnalyzeController {
-    private static final Logger logger = LoggerFactory.getLogger(DicUserController.class);
 
+    private static final Logger logger = LoggerFactory.getLogger(DicUserController.class);
 
     @Autowired
     private MorphAnalyzeService morphAnalyzeService;
@@ -37,9 +39,20 @@ public class MorphAnalyzeController {
     @Autowired
     private FileUploadService fileUploadService;
 
-    @GetMapping("/do-mining")
-    public Object doMining(){
+    @Value("${user.environment}")
+    String environment;
 
+    @Value("${user.prodpath}")
+    String prodpath;
+
+    @GetMapping("/tt01")
+    public Object doMining(){
+        logger.info(environment);
+        return environment;
+    }
+
+    @GetMapping("/do-mining/{fileName}")
+    public ResponseEntity doMining(@PathVariable String fileName, HttpServletResponse response){
 
         List<Map> returnList = new ArrayList<>();
 
@@ -49,47 +62,39 @@ public class MorphAnalyzeController {
 
         List<List<String>> csvList = new ArrayList<List<String>>();
         List<Map> rtn = new ArrayList<Map>();
-//        File csv = new File("C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output/Article_IT_science_20220523_20220523.csv");
 
         BufferedReader br = null;
         String line = "";
 
         try {
-            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output/Article_IT_science_20220523_20220523.csv"), "EUC-KR"));
+//            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output/test.csv"), "UTF-8"));
+            br = new BufferedReader(new InputStreamReader(new FileInputStream(prodpath+fileName), "UTF-8"));
 
             while ((line = br.readLine()) != null) { // readLine()은 파일에서 개행된 한 줄의 데이터를 읽어온다.
-                List<String> aLine = new ArrayList<String>();
+//                List<String> aLine = new ArrayList<String>();
                 String[] lineArr = line.split(","); // 파일의 한 줄을 ,로 나누어 배열에 저장 후 리스트로 변환한다.
-                aLine = Arrays.asList(lineArr);
-
+                List<String> aLine = Arrays.asList(lineArr);
                 KomoranResult analyzeResultList = komoran.analyze(aLine.get(4));
 
                 // Grouping by based on the count
-                Map<String, Long> countMap = analyzeResultList.getNouns().stream()
+                Map<String, Long> countMap = analyzeResultList
+                        .getNouns().stream()
                         .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-                Map<String, Long> groupBySorted = countMap.entrySet().stream().sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                Map<String, Long> groupBySorted = countMap.entrySet().stream()
+                        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                         .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue(), (e1, e2) -> e2, LinkedHashMap::new));
 
                 List<String> rtnList = new ArrayList<>();
 
                 int i=0;
                 for (String s : groupBySorted.keySet()) {
-                    if(i > 4){
+                    if(i > 10){
                         break;
                     }
                     rtnList.add(s);
                     i++;
                 }
-
-//                if(rtnList.size() > 0){
-//                    csvList.add(rtnList);
-//                }
-//                csvList.add(aLine);
-//                Map mappp = new HashMap();
-//                mappp.put("aLine",aLine);
-//                mappp.put("csvList",csvList);
-//                rtn.add(mappp);
 
                 Map returnMap = new HashMap();
                 returnMap.put("weight", rtnList);
@@ -113,8 +118,7 @@ public class MorphAnalyzeController {
             }
         }
 
-        return returnList;
-
+        return ResponseEntity.ok().body(returnList);
     }
 
 
