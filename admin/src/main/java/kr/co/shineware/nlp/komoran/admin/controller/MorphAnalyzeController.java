@@ -38,11 +38,14 @@ public class MorphAnalyzeController {
     private FileUploadService fileUploadService;
 
     @GetMapping("/do-mining")
-    public List doMining(){
+    public Object doMining(){
+
+
+        List<Map> returnList = new ArrayList<>();
 
         Komoran komoran = new Komoran(DEFAULT_MODEL.STABLE);
-        komoran.setFWDic("user_data/fwd.user");
-        komoran.setUserDic("user_data/dic.user");
+//        komoran.setFWDic("user_data/fwd.user");
+//        komoran.setUserDic("user_data/dic.user");
 
         List<List<String>> csvList = new ArrayList<List<String>>();
         List<Map> rtn = new ArrayList<Map>();
@@ -79,14 +82,20 @@ public class MorphAnalyzeController {
                     i++;
                 }
 
-                Map mappp = new HashMap();
-                mappp.put("aLine",aLine);
+//                if(rtnList.size() > 0){
+//                    csvList.add(rtnList);
+//                }
+//                csvList.add(aLine);
+//                Map mappp = new HashMap();
+//                mappp.put("aLine",aLine);
+//                mappp.put("csvList",csvList);
+//                rtn.add(mappp);
 
-                if(rtnList.size() > 0){
-                    csvList.add(rtnList);
-                    mappp.put("csvList",csvList);
-                    rtn.add(mappp);
-                }
+                Map returnMap = new HashMap();
+                returnMap.put("weight", rtnList);
+                returnMap.put("content", aLine);
+
+                returnList.add(returnMap);
 
             }
 
@@ -103,7 +112,9 @@ public class MorphAnalyzeController {
                 e.printStackTrace();
             }
         }
-        return rtn;
+
+        return returnList;
+
     }
 
 
