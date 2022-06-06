@@ -1,5 +1,6 @@
 package kr.co.shineware.nlp.komoran.admin.controller;
 
+import com.sun.javafx.scene.traversal.WeightedClosestCorner;
 import kr.co.shineware.nlp.komoran.admin.service.FileUploadService;
 import kr.co.shineware.nlp.komoran.admin.service.MorphAnalyzeService;
 import kr.co.shineware.nlp.komoran.admin.util.ModelValidator;
@@ -14,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,8 +22,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.nio.charset.Charset;
+import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.Date;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,8 +53,8 @@ public class MorphAnalyzeController {
         return environment;
     }
 
-    @GetMapping("/do-mining/{fileName}")
-    public ResponseEntity doMining(@PathVariable String fileName, HttpServletResponse response){
+    @GetMapping("/do-mining/{fileName}/{tblName}")
+    public ResponseEntity doMining(@PathVariable String fileName, @PathVariable String tblName, HttpServletResponse response) throws ClassNotFoundException {
 
         List<Map> returnList = new ArrayList<>();
 
@@ -67,6 +69,8 @@ public class MorphAnalyzeController {
         String line = "";
 
         try {
+//            C:\Users\82109\Desktop\Article_opinion_20220606_20220606.csv
+//            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Desktop//TTT//"+fileName), "UTF-8"));
 //            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output/test.csv"), "UTF-8"));
             br = new BufferedReader(new InputStreamReader(new FileInputStream(prodpath+fileName), "UTF-8"));
 
@@ -118,7 +122,89 @@ public class MorphAnalyzeController {
             }
         }
 
+        batchJob(returnList, tblName);
+
         return ResponseEntity.ok().body(returnList);
+    }
+
+    private int batchJob(List<Map> returnList, String tblName) throws ClassNotFoundException {
+
+        String currDate = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+
+        Class.forName("org.postgresql.Driver");
+//        postgres://ynfvpocqhghxmn:1ca560b69047b19dfae3cf9f22d4481280a1084e922caebc8a010e837c84f876@ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b
+        String     connurl  = "jdbc:postgresql://ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b";
+        String     user     = "ynfvpocqhghxmn";
+        String     password = "1ca560b69047b19dfae3cf9f22d4481280a1084e922caebc8a010e837c84f876";
+
+        try (Connection connection = DriverManager.getConnection(connurl, user, password);) {
+
+            PreparedStatement pstmt = null;
+
+            String SQL = "" +
+//                    "INSERT INTO public.news_world\n" +
+                    "INSERT INTO public." + tblName + "\n" +
+                    "(sys_occ_dt, sys_occ_ip, writer, read_date, read_title, read_content, read_url, read_gbn, gbn_cd, weight01, weight02, weight03, weight04, weight05, weight06, weight07, weight08, weight09, weight10)\n" +
+                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);" +
+                    "";
+
+            // 3. PreParedStatement 객체 생성, 객체 생성시 SQL 문장 저장
+            pstmt = connection.prepareStatement(SQL);
+
+            for (Map item : returnList) {
+                List<String> weightLst = (List) item.get("weight");
+                List<String> contentLst = (List) item.get("content");
+//                logger.info(weightLst.get(0).toString());
+//                logger.info(contentLst.get(0).toString());
+
+                int wIdx = 10;
+                for (String str : weightLst) {
+                    if(wIdx == 20) break;
+
+                    pstmt.setString(wIdx, str);
+                    wIdx++;
+                }
+
+                // 4. pstmt.set<데이터타입>(? 순서, 값) ex).setString(), .setInt ...
+//                "(sys_occ_dt, sys_occ_ip, writer, read_date, read_title, read_content, read_url, read_gbn, gbn_cd, weight01, weight02, weight03, weight04, weight05, weight06, weight07, weight08, weight09, weight10)\n" +
+                pstmt.setString(1, currDate);
+                pstmt.setString(2, "");
+                pstmt.setString(3, contentLst.get(2));
+                pstmt.setString(4, contentLst.get(0));
+                pstmt.setString(5, contentLst.get(3));
+                pstmt.setString(6, contentLst.get(4));
+                pstmt.setString(7, contentLst.get(5));
+                pstmt.setString(8, contentLst.get(1));
+                pstmt.setString(9, "");
+//                pstmt.setString(10, "5");
+//                pstmt.setString(11, "5");
+//                pstmt.setString(12, "5");
+//                pstmt.setString(13, "5");
+//                pstmt.setString(14, "5");
+//                pstmt.setString(15, "5");
+//                pstmt.setString(16, "5");
+//                pstmt.setString(17, "5");
+//                pstmt.setString(18, "5");
+//                pstmt.setString(19, "5");
+
+                // 5. SQL 문장을 실행하고 결과를 리턴 - SQL 문장 실행 후, 변경된 row 수 int type 리턴
+                pstmt.executeUpdate();
+            }
+
+//            Statement stmt = connection.createStatement();
+//            ResultSet rs = stmt.executeQuery("SELECT VERSION() AS version");
+//            while (rs.next()) {
+//                String version = rs.getString("version");
+//                System.out.println(version);
+//            }
+//            rs.close();
+            pstmt.close();
+            connection.close();
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 1;
     }
 
 
@@ -302,4 +388,9 @@ public class MorphAnalyzeController {
         return csvList;
     }
 
+
+    public static void main(String[] args){
+        System.out.println(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
+
+    }
 }
