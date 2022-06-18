@@ -54,7 +54,7 @@ public class MorphAnalyzeController {
     }
 
     @GetMapping("/do-mining/{fileName}/{tblName}")
-    public ResponseEntity doMining(@PathVariable String fileName, @PathVariable String tblName, HttpServletResponse response) throws ClassNotFoundException {
+    public ResponseEntity doMining(@PathVariable String fileName, @PathVariable String tblName) throws ClassNotFoundException {
 
         List<Map> returnList = new ArrayList<>();
 
@@ -72,7 +72,7 @@ public class MorphAnalyzeController {
 //            C:\Users\82109\Desktop\Article_opinion_20220606_20220606.csv
 //            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Desktop//TTT//"+fileName), "UTF-8"));
 //            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output/test.csv"), "UTF-8"));
-            br = new BufferedReader(new InputStreamReader(new FileInputStream(prodpath+fileName), "UTF-8"));
+            br = new BufferedReader(new InputStreamReader(new FileInputStream(prodpath + fileName), "UTF-8"));
 
             while ((line = br.readLine()) != null) { // readLine()은 파일에서 개행된 한 줄의 데이터를 읽어온다.
 //                List<String> aLine = new ArrayList<String>();
