@@ -69,5 +69,15 @@ logging:
 user:
   environment: dev
   devpath: C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output//
-  prodpath: /apps/output/
+#  prodpath: /apps/output/
+  prodpath: /Users/skps/tmp-data/
 
+heroku:
+  connurl: jdbc:postgresql://ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b
+  user: xxupjozwcgwmym
+  password: 442a4b111a01b6d3d5414d845b5d06d7d4cfe29b9d8874730e9e7bf90e451b1c
+
+#  nohup java -Xms512m -Xmx512m -Dserver.port=8000 -Dserver.address=0.0.0.0 -Duser.prodpath=/home/skps2000/apps/output/
+#  -Dheroku.connurl=ec2-34-242-84-130.eu-west-1.compute.amazonaws.com:5432/d13a195br8j7nm -Dheroku.user=xxupjozwcgwmym
+#  -Dheroku.password=442a4b111a01b6d3d5414d845b5d06d7d4cfe29b9d8874730e9e7bf90e451b1c
+#  -jar admin-1.0.0-SNAPSHOT.jar &

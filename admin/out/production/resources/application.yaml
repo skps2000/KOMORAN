@@ -68,6 +68,11 @@ logging:
 
 user:
   environment: dev
-  devpath: C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output//
-  prodpath: /apps/output/
+  devpath: /Users/skps/tmp-data
+  prodpath: /Users/skps/tmp-data
+
+heroku:
+  connurl: jdbc:postgresql://ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b
+  user: ynfvpocqhghxmn
+  password: 1ca560b69047b19dfae3cf9f22d4481280a1084e922caebc8a010e837c84f876
 

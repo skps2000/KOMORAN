@@ -1,6 +1,5 @@
 package kr.co.shineware.nlp.komoran.admin.controller;
 
-import com.sun.javafx.scene.traversal.WeightedClosestCorner;
 import kr.co.shineware.nlp.komoran.admin.service.FileUploadService;
 import kr.co.shineware.nlp.komoran.admin.service.MorphAnalyzeService;
 import kr.co.shineware.nlp.komoran.admin.util.ModelValidator;
@@ -20,12 +19,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.Date;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,37 +48,124 @@ public class MorphAnalyzeController {
     @Value("${user.prodpath}")
     String prodpath;
 
+    @Value("${heroku.connurl}")
+    String connurl;
+
+    @Value("${heroku.user}")
+    String user;
+
+    @Value("${heroku.password}")
+    String password;
+
     @GetMapping("/tt01")
     public Object doMining(){
         logger.info(environment);
         return environment;
     }
 
+    @GetMapping("/batch-run")
+    public ResponseEntity batchRun(HttpServletRequest req){
+        File dir = new File(this.prodpath);
+
+//        List<String> tableList = new ArrayList();
+//        tableList.add("IT_science,csv,news_itscience");
+//        tableList.add("economy,csv,news_economy");
+//        tableList.add("living_culture,csv,news_living");
+//        tableList.add("opinion,csv,news_opinion");
+//        tableList.add("politics,csv,news_politics");
+//        tableList.add("society,csv,news_society");
+//        tableList.add("world,csv,news_world");
+
+        String[] filenames = dir.list();
+
+        for (String filename : filenames) {
+
+            logger.info("filename : {}", filename);
+
+            if(!filename.endsWith(".csv")){
+                logger.info("is not csv file, skipped");
+                continue;
+            }
+
+            String tblName = "";
+
+            if(filename.startsWith("Article_opinion")){
+                tblName = "news_opinion";
+            }
+            else if(filename.startsWith("Article_IT_science")){
+                tblName = "news_itscience";
+            }
+            else if(filename.startsWith("Article_living_culture")){
+                tblName = "news_living";
+            }
+            else if(filename.startsWith("Article_politics")){
+                tblName = "news_politics";
+            }
+            else if(filename.startsWith("Article_economy")){
+                tblName = "news_economy";
+            }
+            else if(filename.startsWith("Article_society")){
+                tblName = "news_society";
+            }
+            else if(filename.startsWith("Article_world")){
+                tblName = "news_world";
+            }else{
+                logger.info("skip file : {}", filename);
+                continue;
+            }
+
+            try {
+                logger.info("start do mining {}, {}", filename, tblName);
+                doMining(filename, tblName);
+            } catch (Exception e) {
+                logger.info("method batchRun Exception : {}", e.getCause());
+                e.printStackTrace();
+            }
+
+        }
+
+        return ResponseEntity.ok().body(1);
+    }
+
+    @GetMapping("/readfiles")
+    public ResponseEntity readFiles(){
+        String DATA_DIRECTORY = prodpath;
+        File dir = new File(DATA_DIRECTORY);
+
+        String[] filenames = dir.list();
+        for (String filename : filenames) {
+            System.out.println("filename : " + filename);
+        }
+//        postgres://ynfvpocqhghxmn:1ca560b69047b19dfae3cf9f22d4481280a1084e922caebc8a010e837c84f876@ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b
+
+        return null;
+    }
+
+    @GetMapping("/delfiles")
+    public ResponseEntity delFiles(){
+        return null;
+    }
+
     @GetMapping("/do-mining/{fileName}/{tblName}")
-    public ResponseEntity doMining(@PathVariable String fileName, @PathVariable String tblName) throws ClassNotFoundException {
+    public ResponseEntity doMining(@PathVariable String fileName, @PathVariable String tblName) {
 
         List<Map> returnList = new ArrayList<>();
-
         Komoran komoran = new Komoran(DEFAULT_MODEL.STABLE);
-//        komoran.setFWDic("user_data/fwd.user");
-//        komoran.setUserDic("user_data/dic.user");
-
-        List<List<String>> csvList = new ArrayList<List<String>>();
-        List<Map> rtn = new ArrayList<Map>();
-
         BufferedReader br = null;
         String line = "";
 
         try {
-//            C:\Users\82109\Desktop\Article_opinion_20220606_20220606.csv
-//            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Desktop//TTT//"+fileName), "UTF-8"));
-//            br = new BufferedReader(new InputStreamReader(new FileInputStream("C://Users//82109//Documents//GitHub//0509//KoreaNewsCrawler//output/test.csv"), "UTF-8"));
             br = new BufferedReader(new InputStreamReader(new FileInputStream(prodpath + fileName), "UTF-8"));
 
             while ((line = br.readLine()) != null) { // readLine()은 파일에서 개행된 한 줄의 데이터를 읽어온다.
-//                List<String> aLine = new ArrayList<String>();
                 String[] lineArr = line.split(","); // 파일의 한 줄을 ,로 나누어 배열에 저장 후 리스트로 변환한다.
                 List<String> aLine = Arrays.asList(lineArr);
+
+                if(aLine.size() < 5){
+                    logger.info("uncompleted line : {}", line);
+                    continue;
+                }
+
                 KomoranResult analyzeResultList = komoran.analyze(aLine.get(4));
 
                 // Grouping by based on the count
@@ -103,9 +191,7 @@ public class MorphAnalyzeController {
                 Map returnMap = new HashMap();
                 returnMap.put("weight", rtnList);
                 returnMap.put("content", aLine);
-
                 returnList.add(returnMap);
-
             }
 
         } catch (FileNotFoundException e) {
@@ -127,46 +213,51 @@ public class MorphAnalyzeController {
         return ResponseEntity.ok().body(returnList);
     }
 
-    private int batchJob(List<Map> returnList, String tblName) throws ClassNotFoundException {
+    private int batchJob(List<Map> returnList, String tblName) {
 
         String currDate = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
 
-        Class.forName("org.postgresql.Driver");
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
 //        postgres://ynfvpocqhghxmn:1ca560b69047b19dfae3cf9f22d4481280a1084e922caebc8a010e837c84f876@ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b
-        String     connurl  = "jdbc:postgresql://ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b";
-        String     user     = "ynfvpocqhghxmn";
-        String     password = "1ca560b69047b19dfae3cf9f22d4481280a1084e922caebc8a010e837c84f876";
+//        String     connurl  = "jdbc:postgresql://ec2-52-49-120-150.eu-west-1.compute.amazonaws.com:5432/d7lgjb2l3i4u6b";
+//        String     user     = "ynfvpocqhghxmn";
+//        String     password = "1ca560b69047b19dfae3cf9f22d4481280a1084e922caebc8a010e837c84f876";
+        String     connurl  = this.connurl;
+        String     user     = this.user;
+        String     password = this.password;
 
         try (Connection connection = DriverManager.getConnection(connurl, user, password);) {
 
             PreparedStatement pstmt = null;
 
             String SQL = "" +
-//                    "INSERT INTO public.news_world\n" +
                     "INSERT INTO public." + tblName + "\n" +
                     "(sys_occ_dt, sys_occ_ip, writer, read_date, read_title, read_content, read_url, read_gbn, gbn_cd, weight01, weight02, weight03, weight04, weight05, weight06, weight07, weight08, weight09, weight10)\n" +
                     "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);" +
                     "";
 
-            // 3. PreParedStatement 객체 생성, 객체 생성시 SQL 문장 저장
             pstmt = connection.prepareStatement(SQL);
 
             for (Map item : returnList) {
                 List<String> weightLst = (List) item.get("weight");
                 List<String> contentLst = (List) item.get("content");
-//                logger.info(weightLst.get(0).toString());
-//                logger.info(contentLst.get(0).toString());
 
                 int wIdx = 10;
                 for (String str : weightLst) {
                     if(wIdx == 20) break;
 
-                    pstmt.setString(wIdx, str);
+                    if(str.equals("") || str == null){
+                        pstmt.setString(wIdx, "");
+                    }else{
+                        pstmt.setString(wIdx, str);
+                    }
                     wIdx++;
                 }
 
-                // 4. pstmt.set<데이터타입>(? 순서, 값) ex).setString(), .setInt ...
-//                "(sys_occ_dt, sys_occ_ip, writer, read_date, read_title, read_content, read_url, read_gbn, gbn_cd, weight01, weight02, weight03, weight04, weight05, weight06, weight07, weight08, weight09, weight10)\n" +
                 pstmt.setString(1, currDate);
                 pstmt.setString(2, "");
                 pstmt.setString(3, contentLst.get(2));
@@ -176,33 +267,16 @@ public class MorphAnalyzeController {
                 pstmt.setString(7, contentLst.get(5));
                 pstmt.setString(8, contentLst.get(1));
                 pstmt.setString(9, "");
-//                pstmt.setString(10, "5");
-//                pstmt.setString(11, "5");
-//                pstmt.setString(12, "5");
-//                pstmt.setString(13, "5");
-//                pstmt.setString(14, "5");
-//                pstmt.setString(15, "5");
-//                pstmt.setString(16, "5");
-//                pstmt.setString(17, "5");
-//                pstmt.setString(18, "5");
-//                pstmt.setString(19, "5");
 
                 // 5. SQL 문장을 실행하고 결과를 리턴 - SQL 문장 실행 후, 변경된 row 수 int type 리턴
                 pstmt.executeUpdate();
             }
-
-//            Statement stmt = connection.createStatement();
-//            ResultSet rs = stmt.executeQuery("SELECT VERSION() AS version");
-//            while (rs.next()) {
-//                String version = rs.getString("version");
-//                System.out.println(version);
-//            }
-//            rs.close();
             pstmt.close();
             connection.close();
         }
         catch (SQLException e) {
             e.printStackTrace();
+        }finally {
         }
         return 1;
     }
